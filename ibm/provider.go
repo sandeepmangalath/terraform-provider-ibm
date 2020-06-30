@@ -397,9 +397,6 @@ func Validator() ValidatorDict {
 				"ibm_iam_custom_role":  resourceIBMIAMCustomRoleValidator(),
 				"ibm_cis_rate_limit":   resourceIBMCISRateLimitValidator(),
 				"ibm_function_package": resourceIBMFuncPackageValidator(),
-				"ibm_function_action":  resourceIBMFuncActionValidator(),
-				"ibm_function_rule":    resourceIBMFuncRuleValidator(),
-				"ibm_function_trigger": resourceIBMFuncTriggerValidator(),
 			},
 		}
 	})
