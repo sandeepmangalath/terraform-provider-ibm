@@ -17,6 +17,11 @@ func dataSourceIBMFunctionPackage() *schema.Resource {
 				Required:    true,
 				Description: "Name of the package.",
 			},
+			"namespace": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Name of the namespace.",
+			},
 			"publish": {
 				Type:        schema.TypeBool,
 				Computed:    true,
@@ -64,6 +69,7 @@ func dataSourceIBMFunctionPackageRead(d *schema.ResourceData, meta interface{}) 
 
 	d.SetId(pkg.Name)
 	d.Set("name", pkg.Name)
+	d.Set("namespace", pkg.Namespace)
 	d.Set("publish", pkg.Publish)
 	d.Set("version", pkg.Version)
 	annotations, err := flattenAnnotations(pkg.Annotations)

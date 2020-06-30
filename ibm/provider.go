@@ -1,7 +1,6 @@
 package ibm
 
 import (
-	"os"
 	"sync"
 	"time"
 
@@ -119,12 +118,12 @@ func Provider() terraform.ResourceProvider {
 				Description: "The retry count to set for API calls.",
 				DefaultFunc: schema.EnvDefaultFunc("MAX_RETRIES", 10),
 			},
-			"function_namespace": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The IBM Cloud Function namespace",
-				DefaultFunc: schema.EnvDefaultFunc("FUNCTION_NAMESPACE", ""),
-			},
+			//"function_namespace": {
+			//	Type:        schema.TypeString,
+			//	Optional:    true,
+			//	Description: "The IBM Cloud Function namespace",
+			//	DefaultFunc: schema.EnvDefaultFunc("FUNCTION_NAMESPACE", ""),
+			//},
 			"riaas_endpoint": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -393,10 +392,14 @@ func Validator() ValidatorDict {
 	initOnce.Do(func() {
 		globalValidatorDict = ValidatorDict{
 			ResourceValidatorDictionary: map[string]*ResourceValidator{
-				"ibm_is_vpc":          resourceIBMISVPCValidator(),
-				"ibm_is_ike_policy":   resourceIBMISIKEValidator(),
-				"ibm_iam_custom_role": resourceIBMIAMCustomRoleValidator(),
-				"ibm_cis_rate_limit":  resourceIBMCISRateLimitValidator(),
+				"ibm_is_vpc":           resourceIBMISVPCValidator(),
+				"ibm_is_ike_policy":    resourceIBMISIKEValidator(),
+				"ibm_iam_custom_role":  resourceIBMIAMCustomRoleValidator(),
+				"ibm_cis_rate_limit":   resourceIBMCISRateLimitValidator(),
+				"ibm_function_package": resourceIBMFuncPackageValidator(),
+				"ibm_function_action":  resourceIBMFuncActionValidator(),
+				"ibm_function_rule":    resourceIBMFuncRuleValidator(),
+				"ibm_function_trigger": resourceIBMFuncTriggerValidator(),
 			},
 		}
 	})
@@ -457,18 +460,18 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	region := d.Get("region").(string)
 	zone := d.Get("zone").(string)
 	retryCount := d.Get("max_retries").(int)
-	wskNameSpace := d.Get("function_namespace").(string)
+	//wskNameSpace := d.Get("function_namespace").(string)
 	riaasEndPoint := d.Get("riaas_endpoint").(string)
 	generation := d.Get("generation").(int)
 
-	wskEnvVal, err := schema.EnvDefaultFunc("FUNCTION_NAMESPACE", "")()
-	if err != nil {
-		return nil, err
-	}
+	//wskEnvVal, err := schema.EnvDefaultFunc("FUNCTION_NAMESPACE", "")()
+	//if err != nil {
+	//	return nil, err
+	//}
 	//Set environment variable to be used in DiffSupressFunction
-	if wskEnvVal.(string) == "" {
-		os.Setenv("FUNCTION_NAMESPACE", wskNameSpace)
-	}
+	//if wskEnvVal.(string) == "" {
+	//	os.Setenv("FUNCTION_NAMESPACE", wskNameSpace)
+	//}
 
 	config := Config{
 		BluemixAPIKey:        bluemixAPIKey,
@@ -481,12 +484,12 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		RetryCount:           retryCount,
 		SoftLayerEndpointURL: softlayerEndpointUrl,
 		RetryDelay:           RetryAPIDelay,
-		FunctionNameSpace:    wskNameSpace,
-		RiaasEndPoint:        riaasEndPoint,
-		Generation:           generation,
-		IAMToken:             iamToken,
-		IAMRefreshToken:      iamRefreshToken,
-		Zone:                 zone,
+		//FunctionNameSpace:    wskNameSpace,
+		RiaasEndPoint:   riaasEndPoint,
+		Generation:      generation,
+		IAMToken:        iamToken,
+		IAMRefreshToken: iamRefreshToken,
+		Zone:            zone,
 		//PowerServiceInstance: powerServiceInstance,
 	}
 

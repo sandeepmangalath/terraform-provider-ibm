@@ -13,7 +13,7 @@ import (
 
 	apigateway "github.com/IBM/apigateway-go-sdk"
 
-	"github.com/apache/incubator-openwhisk-client-go/whisk"
+	"github.com/apache/openwhisk-client-go/whisk"
 	jwt "github.com/dgrijalva/jwt-go"
 	slsession "github.com/softlayer/softlayer-go/session"
 	issession "github.ibm.com/Bluemix/riaas-go-client/session"
@@ -513,7 +513,7 @@ func (c *Config) ClientSession() (interface{}, error) {
 		sess.SoftLayerSession.IAMRefreshToken = sess.BluemixSession.Config.IAMRefreshToken
 	}
 
-	session.functionClient, session.functionConfigErr = FunctionClient(sess.BluemixSession.Config, c.FunctionNameSpace)
+	session.functionClient, session.functionConfigErr = FunctionClient(sess.BluemixSession.Config)
 
 	BluemixRegion = sess.BluemixSession.Config.Region
 

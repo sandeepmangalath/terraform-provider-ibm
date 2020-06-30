@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/apache/incubator-openwhisk-client-go/whisk"
+	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/softlayer/softlayer-go/datatypes"
 	"github.com/softlayer/softlayer-go/sl"
@@ -744,6 +744,7 @@ func filterInheritedParameters(inheritedParameters, parameters whisk.KeyValueArr
 			insert = false
 			break
 		}
+
 		for _, b := range inheritedParameters {
 			if p.Key == b.Key && reflect.DeepEqual(p.Value, b.Value) {
 				insert = false

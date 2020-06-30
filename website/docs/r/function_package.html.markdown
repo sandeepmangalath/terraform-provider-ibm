@@ -16,8 +16,8 @@ Create, update, or delete [IBM Cloud Functions packages](https://cloud.ibm.com/d
 
 ```hcl
 resource "ibm_function_package" "package" {
-  name = "package-name"
-
+  name      = "package-name"
+  namespace = "function-namespace-name"
   user_defined_annotations = <<EOF
         [
     {
@@ -51,6 +51,7 @@ EOF
 ``` hcl
 resource "ibm_function_package" "bindpackage" {
   name              = "bindalaram"
+  namespace         = "function-namespace-name"
   bind_package_name = "/whisk.system/alarms/alarm"
 
   user_defined_parameters = <<EOF
@@ -83,6 +84,7 @@ EOF
 The following arguments are supported:
 
 * `name` - (Required,  Forces new resource, string) The name of the package.
+* `namespace` - (Required, string) The name of the function namespace.
 * `publish` - (Optional, boolean) Package visibility.
 * `user_defined_annotations` - (Optional, string) Annotations defined in key value format.
 * `user_defined_parameters` - (Optional, string) Parameters defined in key value format. Parameter bindings included in the context passed to the package.

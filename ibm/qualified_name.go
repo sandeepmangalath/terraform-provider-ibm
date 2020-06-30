@@ -109,7 +109,7 @@ func NewQualifiedName(name string) (*QualifiedName, error) {
 			qualifiedName.packageName = parts[0]
 		}
 		qualifiedName.EntityName = name
-		qualifiedName.namespace = getNamespaceFromProp()
+		//qualifiedName.namespace = getNamespaceFromProp()
 	}
 
 	return qualifiedName, nil

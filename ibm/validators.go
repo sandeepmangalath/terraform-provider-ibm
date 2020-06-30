@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -75,6 +76,22 @@ func validateRegexpLen(min, max int, regex string) schema.SchemaValidateFunc {
 					"%q (%q) must contain from %d to %d characters ", k, value, min, max))
 			}
 		} else {
+			errors = append(errors, fmt.Errorf(
+				"%q (%q) should match regexp %s ", k, v, regex))
+		}
+
+		return
+
+	}
+}
+
+func validateRegexp(regex string) schema.SchemaValidateFunc {
+	return func(v interface{}, k string) (ws []string, errors []error) {
+		value := v.(string)
+
+		acceptedcharacters, _ := regexp.MatchString(regex, value)
+
+		if !acceptedcharacters {
 			errors = append(errors, fmt.Errorf(
 				"%q (%q) should match regexp %s ", k, v, regex))
 		}
@@ -470,14 +487,16 @@ func validateNamespace(ns string) error {
 	return nil
 }
 
-func validateJSONString(v interface{}, k string) (ws []string, errors []error) {
-	if _, err := normalizeJSONString(v); err != nil {
-		errors = append(errors, fmt.Errorf("%q contains an invalid JSON: %s", k, err))
+func validateJSONString() schema.SchemaValidateFunc {
+	return func(v interface{}, k string) (ws []string, errors []error) {
+		if _, err := normalizeJSONString(v); err != nil {
+			errors = append(errors, fmt.Errorf("%q contains an invalid JSON: %s", k, err))
+		}
+		if err := validateKeyValue(v); err != nil {
+			errors = append(errors, fmt.Errorf("%q contains an invalid JSON: %s", k, err))
+		}
+		return
 	}
-	if err := validateKeyValue(v); err != nil {
-		errors = append(errors, fmt.Errorf("%q contains an invalid JSON: %s", k, err))
-	}
-	return
 }
 
 func validateKeyValue(jsonString interface{}) error {
@@ -503,25 +522,27 @@ func validateKeyValue(jsonString interface{}) error {
 	return nil
 }
 
-func validateActionName(v interface{}, k string) (ws []string, errors []error) {
-	value := v.(string)
+func validateActionName() schema.SchemaValidateFunc {
+	return func(v interface{}, k string) (ws []string, errors []error) {
+		value := v.(string)
 
-	if strings.HasPrefix(value, "/") {
-		errors = append(errors, fmt.Errorf(
-			"%q (%q) must not start with a forward slash '/'.The action name should be like 'myaction' or utils/cloudant'", k, value))
-
-	}
-
-	const alphaNumeric = "abcdefghijklmnopqrstuvwxyz0123456789/_@.-"
-
-	for _, char := range value {
-		if !strings.Contains(alphaNumeric, strings.ToLower(string(char))) {
+		if strings.HasPrefix(value, "/") {
 			errors = append(errors, fmt.Errorf(
-				"%q (%q) The name of the package contains illegal characters", k, value))
-		}
-	}
+				"%q (%q) must not start with a forward slash '/'.The action name should be like 'myaction' or utils/cloudant'", k, value))
 
-	return
+		}
+
+		const alphaNumeric = "abcdefghijklmnopqrstuvwxyz0123456789/_@.-"
+
+		for _, char := range value {
+			if !strings.Contains(alphaNumeric, strings.ToLower(string(char))) {
+				errors = append(errors, fmt.Errorf(
+					"%q (%q) The name of the package contains illegal characters", k, value))
+			}
+		}
+
+		return
+	}
 }
 
 func validateActionKind(v interface{}, k string) (ws []string, errors []error) {
@@ -543,36 +564,26 @@ func stringInSlice(str string, list []string) bool {
 	return false
 }
 
-func validateFunctionName(v interface{}, k string) (ws []string, errors []error) {
-	value := v.(string)
+func validateBindedPackageName() schema.SchemaValidateFunc {
+	return func(v interface{}, k string) (ws []string, errors []error) {
+		value := v.(string)
 
-	var validName = regexp.MustCompile(`\A([\w]|[\w][\w@ .-]*[\w@.-]+)\z`)
-	if !validName.MatchString(value) {
-		errors = append(errors, fmt.Errorf(
-			"%q (%q) The name contains illegal characters", k, value))
+		if !(strings.HasPrefix(value, "/")) {
+			errors = append(errors, fmt.Errorf(
+				"%q (%q) must start with a forward slash '/'.The package name should be '/whisk.system/cloudant', '/test@in.ibm.com_new/utils' or '/_/utils'", k, value))
 
+		}
+
+		index := strings.LastIndex(value, "/")
+
+		if index < 2 || index == len(value)-1 {
+			errors = append(errors, fmt.Errorf(
+				"%q (%q) is not a valid bind package name.The package name should be '/whisk.system/cloudant','/test@in.ibm.com_new/utils' or '/_/utils'", k, value))
+
+		}
+
+		return
 	}
-	return
-}
-
-func validateBindedPackageName(v interface{}, k string) (ws []string, errors []error) {
-	value := v.(string)
-
-	if !(strings.HasPrefix(value, "/")) {
-		errors = append(errors, fmt.Errorf(
-			"%q (%q) must start with a forward slash '/'.The package name should be '/whisk.system/cloudant', '/test@in.ibm.com_new/utils' or '/_/utils'", k, value))
-
-	}
-
-	index := strings.LastIndex(value, "/")
-
-	if index < 2 || index == len(value)-1 {
-		errors = append(errors, fmt.Errorf(
-			"%q (%q) is not a valid bind package name.The package name should be '/whisk.system/cloudant','/test@in.ibm.com_new/utils' or '/_/utils'", k, value))
-
-	}
-
-	return
 }
 
 func validateStorageType(v interface{}, k string) (ws []string, errors []error) {
@@ -1009,6 +1020,27 @@ func validateISName(v interface{}, k string) (ws []string, errors []error) {
 	return
 }
 
+// NoZeroValues is a SchemaValidateFunc which tests if the provided value is
+// not a zero value. It's useful in situations where you want to catch
+// explicit zero values on things like required fields during validation.
+func validateNoZeroValues() schema.SchemaValidateFunc {
+	return func(i interface{}, k string) (ws []string, errors []error) {
+
+		if reflect.ValueOf(i).Interface() == reflect.Zero(reflect.TypeOf(i)).Interface() {
+			switch reflect.TypeOf(i).Kind() {
+			case reflect.String:
+				errors = append(errors, fmt.Errorf("%s must not be empty, got %v", k, i))
+			case reflect.Int, reflect.Float64:
+				errors = append(errors, fmt.Errorf("%s must not be zero, got %v", k, i))
+			default:
+				// this validator should only ever be applied to TypeString, TypeInt and TypeFloat
+				errors = append(errors, fmt.Errorf("can't use NoZeroValues with %T attribute %s", k, i))
+			}
+		}
+		return
+	}
+}
+
 // ValidateFunc is honored only when the schema's Type is set to TypeInt,
 // TypeFloat, TypeString, TypeBool, or TypeMap. It is ignored for all other types.
 // enum to list all the validator functions supported by this tool.
@@ -1023,6 +1055,11 @@ const (
 	ValidateCIDR
 	ValidateAllowedIntValue
 	ValidateRegexpLen
+	ValidateRegexp
+	ValidateNoZeroValues
+	ValidateJSONString
+	ValidateBindedPackageName
+	ValidateActionName
 )
 
 // ValueType -- Copied from Terraform for now. You can refer to Terraform ValueType directly.
@@ -1128,7 +1165,6 @@ func InvokeValidator(resourceName, identifier string) schema.SchemaValidateFunc 
 // the function is currently modified to invoke SchemaValidateFunc directly.
 // But in terraform, we will just return SchemaValidateFunc as shown below.. So terraform will invoke this func
 func invokeValidatorInternal(schema ValidateSchema) schema.SchemaValidateFunc {
-
 	funcIdentifier := schema.ValidateFunctionIdentifier
 	switch funcIdentifier {
 	case IntBetween:
@@ -1153,6 +1189,16 @@ func invokeValidatorInternal(schema ValidateSchema) schema.SchemaValidateFunc {
 		return validateAllowedIntValue(allowedValues.([]int))
 	case ValidateRegexpLen:
 		return validateRegexpLen(schema.MinValueLength, schema.MaxValueLength, schema.Regexp)
+	case ValidateRegexp:
+		return validateRegexp(schema.Regexp)
+	case ValidateNoZeroValues:
+		return validateNoZeroValues()
+	case ValidateJSONString:
+		return validateJSONString()
+	case ValidateBindedPackageName:
+		return validateBindedPackageName()
+	case ValidateActionName:
+		return validateActionName()
 
 	default:
 		return nil
